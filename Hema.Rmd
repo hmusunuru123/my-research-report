@@ -1,0 +1,200 @@
+---
+title: "Heart Disease Prediction "
+author: "Hema Mallik Musunuru"
+date: "15/06/2022"
+output: 
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("gtools")
+#install.packages("gmodels")
+#install.packages("rmdformats")
+library(dplyr)
+library(gtools)
+library(gmodels)
+library(ggplot2)
+library(class)
+library(tidyr)
+library(lattice)
+library(caret)
+library(rmdformats)
+```
+
+## Summary
+
+There is an increase in the day  to day cases of heart failure disease at a very high rate and this has contributed to the need to have an efficient and effective way of predicting the heart failure disease. Therefore this project has focused on developing a machine learning algorithm that will precisely and efficiently predict which patient is more likely to have a heart disease by putting into consideration various medical attributes. The heart disease prediction system in this project will help to predict if a given patient based on their medical history is likely to be diagnosed with a heart disease or not. The project has implemented the logistic regression machine learning algorithm for this task. The use of this algorithm has been motivated by the gap identified in the literature review that proposes a model that can be used to improve the accuracy of predicting Heart Attack for any patient. The results from this project are important as they will help enhance medical care as well as reduce cost for the heart disease patients. the project also provides important knowledge essential in predicting patients with heart disease. The dataset used for this project has been retrieved from the Kaggle.com website.  
+
+## Introduction
+These days cardiovascular diseases have become very common and they provide a description of a range of conditions that have the possibility of affecting one's heart. There was an estimates of 17.9 million global deaths from Cardiovascular disease by the World Health Organization. Heart disease are known to be one of the primary reasons that course deaths in adults. Therefore, this project intends to help in predicting patients or individuals who are likely to be diagnosed with a heart disease through the help of their medical history. The project utilizes high blood pressure or chest pain to recognize patients who have symptoms of heart disease and this will help in the diagnosis of the heart disease with effective treatments and less medical tests to ensure that patients are cured accordingly. 
+Therefore, the main objective of this project will be to check whether there is a likelihood of a patients to be diagnosed with heart disease with the look of their medical attributes like high blood pressure, gender, fasting sugar level, chest pain, age, and many more. The project will utilize a dataset retrieved from the Kaggle.com website which contains the medical attributes and history of patients. 
+
+## Literature Review
+The project has been motivated by a quiet of significant amount of related work to the diagnosis of heart disease through the utilization of machine learning algorithms. 
+In their study, Reddy et al. (2019), they utilized Random Forest, Neural Network, and k-Nearest Neighbor for the classification of the cardiac heart diseases to either normal or abnormal. From the results of their study, the authors were able to identify that Random Forest machine learning algorithm was able to accomplish an optimal performance. In another study by Atallah & Al-Mousa, the authors utilized the logistic regression, Random Forest, K-Nearest Neighbor, and stochastic gradient descent in predicting the diagnosis of heart disease. They were able to identify that the K-Nearest Neighbor algorithm achieved the highest accuracy of 90% compared to the other algorithms. In another study by Kannan & Vasanthi (2019), the authors implemented four machine learning algorithms to predict heart disease. These algorithms include logistic regression, stochastic gradient boosting, Random Forest, and support vector machine. From the analysis and prediction, it was identified that logistic regression had the highest accuracy of 86.5%. 
+From the identified related works, it is clear that there were a number of machine learning algorithms implemented and most of the literature concentrated on the accuracy of this algorithms. This however leaves a gap of identify what are the main contributing factors to the heart disease for individuals. Therefore, this project intends to perform predictions on heart disease and also identify and predict the main contributing medical attributes to the heart disease. The project 
+
+## Theory
+
+H1: There are more males than females that are diagnosed with heart disease. 
+
+H2: Older people are more likely to be diagnosed with heart disease.  
+
+## Data
+The dataset for this project was downloaded from Kaggle.com website through https://www.kaggle.com/code/shravankumar94/heart-disease-analysis-with-r/data. The data includes :
+```{r echo=FALSE}
+heart_data <- read.csv("C:/Users/User/Downloads/heart (1).csv")
+glimpse(heart_data)
+
+```
+Since most of the predictor variable in the dataset do not have correct data type, there was the need to adjust the variable types. 
+```{r}
+heart_data <- heart_data %>%
+  mutate(cp = as.factor(cp),
+         restecg = as.factor(restecg),
+         slope = as.factor(slope),
+         ca = as.factor(ca),
+         thal = as.factor(thal),
+         sex = factor(sex, levels = c(0,1), labels = c("female", "male")),
+         fbs = factor(fbs, levels = c(0,1), labels = c("False", "True")),
+         exang = factor(exang, levels = c(0,1), labels = c("No", "Yes")),
+         target = factor(target, levels = c(0,1), labels = c("Health", "Not Health")))
+
+glimpse(heart_data)
+
+```
+Check for any missing values in the dataset for each variable.
+```{r}
+colSums(is.na(heart_data))
+```
+Check the target variable proportions. 
+```{r}
+table(heart_data$target)
+
+```
+
+## Methodology
+
+Having the data pre processed and identifying that the target variable is balanced, then the next step involve splitting the heart_data to train and test set. The train set will be for training the model and the test set will be validating the model. 
+
+
+```{r}
+set.seed(100)
+index <- sample(nrow(heart_data), nrow(heart_data)*0.7)
+
+# Data train
+heart_train <- heart_data[index,]
+
+# Data test
+heart_test <- heart_data[-index,]
+
+```
+Next, involve checking the train data proportion of whether there is a balance for training the model to help minimize the problem of overfitting. 
+
+```{r}
+prop.table(table(heart_train$target))
+```
+The model is created based in the train data. Variables like thal, cp, thal, fbs, and sex that may have significant effect on target variable have been used. 
+
+```{r}
+model_heart <- glm(formula = target ~ sex + cp +  fbs + thal, family = "binomial", data = heart_train)
+
+# Model summary
+summary(model_heart)
+```
+Next, there needs to have a model where one model has to have the target variable without predictor and the other with all predictors. 
+
+```{r}
+# Create a model without predictor
+model_none <- glm(target ~ 1, family = "binomial", data = heart_data)
+
+# Create a model with all predictor
+model_all <- glm(target ~ ., family = "binomial", data = heart_data)
+
+```
+```{r}
+# Stepwise regression backward
+model_back <- step(object = model_all, direction = "backward", trace = F)
+
+# Stepwise regression forward
+model_forw <- step(object = model_all, scope = list(lower = model_none, upper = model_all), direction = "forward", trace = F)
+
+# Stepwise regression both
+model_both <- step(object = model_all, scope = list(lower = model_none, upper = model_all), direction = "both", trace = F)
+```
+
+## Results
+Having build the model the next step involve making predictions by the use 
+```{r}
+heart_test$prediction <-  predict(model_both, type = "response", newdata = heart_test)
+pred <- predict(model_both, type = "response", newdata = heart_test)
+result_pred <- ifelse(pred >= 0.5, "Not Health", "Health")
+
+# Put our result prediction into our test data
+
+heart_test$prediction <- result_pred
+heart_test %>%
+  select(target, prediction) %>%
+  head(5)
+```
+
+```{r}
+#install.packages("proxy")
+conf_mat <- confusionMatrix(as.factor(result_pred), reference = heart_test$target, positive = "Not Health")
+
+conf_mat
+recall <- round(46/(46+4),3)
+specificity <- round(30/(30+11),3)
+precision <- round(46/(46+11),3)
+accuracy <- round((46+30)/(46+30+11+4),3)
+
+matrix <- cbind.data.frame(accuracy, recall, specificity, precision)
+
+matrix
+```
+The results of the prediction illustrates that the probability of the male to have heart disease is 16.4%. In addition, individuals who have a higher level or severe type of pain, that is, cp=3, have a 93% change of being diagnosed with heart disease. 
+
+
+```{r}
+# Return the probability value
+
+model_both$coefficients %>%
+  inv.logit() %>%
+  data.frame()
+
+```
+For sex and target, there are more male patients with the heart disease diagnosis than that of the female patients. 
+```{r echo=FALSE}
+heart_data %>% group_by(sex,target) %>% summarise(count = n()) %>%
+  ggplot() + geom_bar(aes(sex, count,   fill = as.factor(target)), stat = "Identity") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, size = 10)) + 
+  ylab("Count") + xlab("sex") + labs(fill = "Sex")
+```
+
+From the analysis of age and diagnosis for heart disease, it is clear that 
+
+```{r echo=FALSE}
+heart_data %>% group_by(age,target) %>% summarise(count = n()) %>%
+  ggplot() + geom_bar(aes(age, count,   fill = as.factor(target)), stat = "Identity") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, size = 10)) + 
+  ylab("Count") + xlab("Age") + labs(fill = "age")
+```
+
+ 
+
+## Conclusion
+
+The theory that there are more males than females that are diagnosed with heart disease is true. There are more males diagnosed with heart disease as identified in the analysis. On the other hand, heart disease is not high on older patients, and therefore the theory that Older people are more likely to be diagnosed with heart disease is not true. Heart disease is high on individuals at the age of 50 years but beyond 60 years the number of patients with heart disease are very few.
+
+
+## References
+
+Atallah, R., & Al-Mousa, A. (2019, October). Heart disease detection using machine learning majority voting ensemble method. In 2019 2nd international conference on new trends in computing sciences (ictcs) (pp. 1-6). IEEE.
+
+Kannan, R., & Vasanthi, V. (2019). Machine learning algorithms with ROC curve for predicting and diagnosing the heart disease. In Soft computing and medical bioinformatics (pp. 63-72). Springer, Singapore.
+
+Reddy, N. S. C., Nee, S. S., Min, L. Z., & Ying, C. X. (2019). Classification and feature selection approaches by machine learning techniques: Heart disease prediction. International Journal of Innovative Computing, 9(1).
